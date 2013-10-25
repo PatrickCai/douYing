@@ -270,7 +270,7 @@ def modify_final_rate(final_rate_dic,movies_have_seen):
     print(final_rate_list)
     with open("F:/a.txt","w") as tt:
         for fff in final_rate_list:
-            tt.write("%s\n"%(fff))
+            tt.write('%s:%s\n'%(fff[0],fff[1]))
 
     return final_rate_list,original_movie
 #对前一百部电影爬取并筛选
