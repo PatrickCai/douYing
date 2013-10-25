@@ -272,7 +272,7 @@ def modify_final_rate(final_rate_dic,movies_have_seen):
         for fff in final_rate_list:
             tt.write('%s:%s\n'%(fff[0],fff[1]))
 
-    return final_rate_list,original_movie
+    return final_rate_list,original_movie_list
 #对前一百部电影爬取并筛选
 def filter_top_movie(final_rate_list,original_movie_list):
     movie_delte_list=[]
