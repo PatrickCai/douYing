@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import mechanize,requests,sys,re,cPickle,socket
+import requests,sys,re,cPickle,socket
 # from daili import get_daili
 from bs4 import BeautifulSoup
 
