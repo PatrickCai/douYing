@@ -265,20 +265,79 @@ def modify_final_rate(final_rate_dic,movies_have_seen):
             pass
         print(u'已经删除看过的电影%s'%(movie_id))
     #根据final_rate来评分
-    final_rate_list=sorted(final_rate_dic.iteritems(),key=lambda x:x[1]['final_rate'],reverse=True)[0:100]
+    final_rate_list=sorted(final_rate_dic.iteritems(),key=lambda x:x[1]['final_rate'],reverse=True)[0:200]
+    #将数据重新拼接到final_rate_dic
+    final_rate_dic.clear()
+    for final_rate in final_rate_list:
+        final_rate_dic[final_rate[0]]=final_rate[1]
+
     original_movie_list=[movie[0] for movie in final_rate_list]
-    print(final_rate_list)
-    with open("F:/a.txt","w") as tt:
-        for fff in final_rate_list:
-            tt.write("%s\n"%(fff))
-
-    return final_rate_list,original_movie
-#对前一百部电影爬取并筛选
-def filter_top_movie(final_rate_list,original_movie_list):
+    cPickle.dump(final_rate_dic,open('F:/ct.txt',"w"))
+    cPickle.dump(original_movie_list,open('F:/clis.txt'),"w")
+    return final_rate_dic,original_movie_list
+#对前两百部电影爬取并筛选
+def filter_top_movie(final_rate_dic,original_movie_list):
     movie_delte_list=[]
-    for movie in original_movie_list:
-        pass
+    def request_movie(movie_id):
+        try:
+            global proxies
+            r=requests.get('%s%s'%(MOVIE_REAL,movie_id),timeout=8,proxies=proxies)
+        except (requests.exceptions.ConnectionError,requests.exceptions.Timeout,socket.timeout):
+            proxies=get_next_proxy()
+            r=request_movie(movie_id)
+        return r
+    for movie_id in original_movie_list:
+        r=request_movie(movie_id)
+        while 1:
+            if r.status_code!=200:
+                print(r.status_code)
+                proxies=get_next_proxy()
+                r=request_movie(movie_id)
+            else:
+                break
+        soup=BeautifulSoup(r.content)
+        #判断是不是电视剧或者动画等
+        is_tele=bool(re.search(u'第[\u4e00-\u9fa5]季|Saturday Night Live|周六夜现场|周末夜现场',soup.find('span',{'property':'v:itemreviewed'}).text))
+        is_episode=bool(soup.find('div','episode_list'))
+        for genre in soup.findAll('span',{'property':'v:genre'}):
+            if(genre.text==u'动画'):
+                is_cartoon=True
+                break
+            else:
+                is_cartoon=False
+        #只要有一项满足就删除
+        if(is_cartoon or is_episode or is_tele):
+            del final_rate_dic[movie_id]
+        #如果没有删除则读取评价
+        else:
+            comment_item={}
+            try:
+                comment_p=soup.find('span',class_=re.compile('allstar50')).find_parent('h3').find_next_sibling('p').text
+                comment_author=soup.find('span',class_=re.compile('allstar50')).find_previous_sibling('a').text
+                comment_star=5
+            except AttributeError:
+                try:
+                    comment_p=soup.find('span',class_=re.compile('allstar40')).find_parent('h3').find_next_sibling('p').text
+                    comment_author=soup.find('span',class_=re.compile('allstar40')).find_previous_sibling('a').text
+                    comment_star=4
+                except AttributeError:
+                    try:
+                        comment_p=soup.find('span',class_=re.compile('allstar30')).find_parent('h3').find_next_sibling('p').text
+                        comment_author=soup.find('span',class_=re.compile('allstar30')).find_previous_sibling('a').text
+                        comment_star=3
+                    except AttributeError:
+                        comment_item={}
 
+            comment_item['comment_p']=comment_p
+            comment_item['comment_author']=comment_author
+            comment_item['comment_star']=comment_star
+            #再插入到final_rate_dic中
+            final_rate_dic[movie_id]['comment']=comment_item
+        print(u"电影%s已经筛选完毕")
+        
+    with open("F:/a.txt","w") as tt:
+        for fff in final_rate_dic.iteritems():
+            tt.write("%s %s\n"%(fff[0],fff[1]))
 
 
 
@@ -350,32 +409,7 @@ def get_movie(celebrity):
     print(u"已完成对影人%s的搜索,共有%s部电影"%(celebrity,len(mv_list)))
     return (mv_list,star_list)
 
-#生成电影的字典,key是电影id,value是数组,数组中是名人
-def get_result(celebrities_list):
-    cele_movie_dict={}
-    for celebrity in celebrities_list:
-        #生成名人参与电影的列表
-        movie_list=get_movie(celebrity)
-        cele_movie_dict[celebrity]=movie_list
-
-    return cele_movie_dict
-
-def dic_transform(cele_movie_dict):
-    movie_cele_dict={}
-    for key,values in cele_movie_dict.iteritems():
-        for value in values:
-            try:
-                this_item=movie_cele_dict[value]
-                movie_cele_dict[value].append(key)
-            except KeyError:
-                this_item=[]
-                this_item.append(key)
-                movie_cele_dict[value]=this_item
-    
-    for key,values in movie_cele_dict.iteritems():
-        if(len(values)>1):
-            print("%s:%s"%(key,values))
-    
+ 
 
 if __name__=="__main__":
     #获得喜欢的电影人
@@ -386,6 +420,7 @@ if __name__=="__main__":
     star_movies,movies_have_seen=get_star_movies("cliffedge")
     original_star_movies,loved_cele_mv_dict = cele_filter(star_movies,loved_cele_list)
     final_rate_dic = get_final_rate_dic(original_star_movies)
-    final_rate_list,original_movie_list=modify_final_rate(final_rate_dic,movies_have_seen)
+    final_rate_dic,original_movie_list=modify_final_rate(final_rate_dic,movies_have_seen)
+    filter_top_movie(final_rate_dic,original_movie_list)
 
 
