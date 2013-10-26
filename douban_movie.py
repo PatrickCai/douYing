@@ -272,8 +272,11 @@ def modify_final_rate(final_rate_dic,movies_have_seen):
         final_rate_dic[final_rate[0]]=final_rate[1]
 
     original_movie_list=[movie[0] for movie in final_rate_list]
-    cPickle.dump(final_rate_dic,open('F:/ct.txt',"w"))
-    cPickle.dump(original_movie_list,open('F:/clis.txt'),"w")
+    try:
+        cPickle.dump(final_rate_dic,open('F:/ct.txt',"w"))
+        cPickle.dump(original_movie_list,open('F:/clis.txt',"w"))
+    except:
+        pass
     return final_rate_dic,original_movie_list
 #对前两百部电影爬取并筛选
 def filter_top_movie(final_rate_dic,original_movie_list):
@@ -333,7 +336,7 @@ def filter_top_movie(final_rate_dic,original_movie_list):
             comment_item['comment_star']=comment_star
             #再插入到final_rate_dic中
             final_rate_dic[movie_id]['comment']=comment_item
-        print(u"电影%s已经筛选完毕")
+        print(u"电影%s已经筛选完毕"%(movie_id))
         
     with open("F:/a.txt","w") as tt:
         for fff in final_rate_dic.iteritems():
